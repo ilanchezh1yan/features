@@ -1,30 +1,27 @@
 #include "main.h"
 
-#define DAC_12_RESOLUTION  4095.0
-#define DAC_16_RESOLUTION  65535
-#define REF_VOLTAGE     5000.0
-#define VOLT_CONV_COEFF(x) (float)(REF_VOLTAGE / x)
-
-#define MXP5010GP_TYP_OFFSET    200
-#define MXP5010GP_SENSITIVITY   44.13
-
-#define MXP7002DP_OFFSET       500
-#define MXP7002DP_SENSITIVITY  1
-
-#define SLAVE_ADDRESS 0x48
-#define SLAVE_WRITE   SLAVE_ADDRESS << 1
-#define SLAVE_READ    (SLAVE_ADDRESS << 1) | 1
-
-extern DAC_HandleTypeDef hdac;
-extern ADC_HandleTypeDef hadc1;
-extern I2C_HandleTypeDef hi2c2;
-
-uint16_t calculated_pressure(void);
-uint16_t calculated_volume(uint16_t );
-int32_t Read_Flow(uint8_t *);
-void calculated_capacity(void);
+#include "lung_compilance.h"
+#include "Kalman_filter.h"
 
 double  flow;
+double Max_flow, Max_flow_2;
+double flow_2;
+float dp;
+uint16_t vlt;
+
+uint16_t count;
+
+#if 0
+void kalman_filter_init()
+{
+	struct system_model Model;
+	Model.A = 1;
+	Model.H = 1;
+	Model.Q = 1;
+	Model.R = 1;
+}
+#endif
+
 
 int32_t Read_Flow(uint8_t * data)
 {
@@ -47,6 +44,20 @@ int32_t Read_Flow(uint8_t * data)
 	return -1;
 }
 
+double dp_to_flow(float dp){
+
+#if 1
+	if(dp < 0.1){
+		return 0.0;
+	}
+#endif
+
+	double flow = ((0.72*dp*dp*dp) - (8.01*dp*dp) + (56.7*dp) - 6.18);
+	flow_2 = ((0.1512*dp*dp*dp) - (3.3424*dp*dp) + (41.657*dp));  // as per data sheet
+	return flow;
+}
+
+
 uint16_t calculated_pressure(void)
 {
 	uint16_t Vlt;
@@ -64,38 +75,54 @@ uint16_t calculated_pressure(void)
 	return pressure;
 }
 
-uint16_t calculated_volume(uint16_t offset)
+float calculated_volume(uint16_t offset, uint16_t error)
 {
+	count = 0;
 	uint32_t ret;
-	uint16_t Raw_value ;
-	uint16_t prv_read = 0;
-	uint16_t volume;
-	static uint16_t reading;
-	uint16_t vlt;
-	float dp;
+	uint16_t Raw_value, sampling_rate = 1000;
+	float prv_read = 0;
+	float V = 0;
+
+	float arr[5000] = {0};
+	static uint16_t reading = 0;
+	struct parameters KF_param = {
+					.estimate = offset,
+					.predict = error
+	};
+
+
 	//int8_t flow_direction = 1;
 
+	Max_flow_2 = 0;
+	Max_flow = 0;
 
 
-	while(1) {
-    ret = Read_Flow((uint8_t *)&Raw_value);
-	if(ret != -1)
-		return ret;
+	while(1){
+		ret = Read_Flow((uint8_t *)&Raw_value);
+		if(ret != -1)
+			return ret;
 
-	//Raw_value = Raw_value << 8 | Raw_value >> 8;
-	vlt = Raw_value * 6144.0 / 32767;
-	reading = (1 - 0.15) * reading + (0.15 * vlt);
-	if(prv_read > reading) {
+		Raw_value = Raw_value << 8 | Raw_value >> 8;
+		Raw_value = Raw_value & 0xFFFB;
+		vlt = Raw_value * 6144.0 / 32767.0;
+
+		vlt = (uint16_t)Kalman_filter(vlt , &KF_param);
+		reading = (1 - 0.15) * reading + (0.15 * vlt);
+		dp = ((float)reading - (float)offset) / (float)100.0;
+		flow = dp_to_flow(dp);
+		arr[count] = flow;
+		V += (float)((flow / 60)) * 1.078;
+		Max_flow = flow > Max_flow ? flow : Max_flow;
+		Max_flow_2 = flow_2 > Max_flow_2 ? flow_2 : Max_flow_2;
+
+		if(prv_read > (float)0 && flow <= (float)0 ) {
+			flow = Max_flow;
 			break;
+		}
+
+		prv_read = flow;
+		count++;
+		sampling_rate--;
 	}
-	dp = (reading - offset)/ 1000.0;
-
-	flow = ((0.72*dp*dp*dp) - (8.01*dp*dp) + (56.7*dp) - 6.18);
-	//flow = ((0.1512*dp*dp*dp) - (3.3424*dp*dp) + (41.657*dp));  // as per data sheet
-
-	volume += (flow / 60.0) * 2;
-	prv_read = reading;
-	HAL_Delay(2);
-}
-	return volume;
+	return V;
 }

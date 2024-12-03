@@ -1,27 +1,25 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include "bluetooth.h"
 #include "AFE_Function.h"
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 
 #include "string.h"
 #include "stdio.h"
-#include "inttypes.h"
-#include "arm_math.h"
-#include "arm_const_structs.h"
-#include "arm_common_tables.h"
-#include "dsp/transform_functions.h"
-#include "dsp/filtering_functions.h"
-#include "math.h"
 
-#include "arm_math_types.h"
-#include "arm_math_memory.h"
+//#include "AFE44x0.h"
 
-#include "dsp/none.h"
-#include "dsp/utils.h"
+#define CES_CMDIF_PKT_START_1   0x0A
+#define CES_CMDIF_PKT_START_2   0xFA
+#define CES_CMDIF_TYPE_DATA   0x02
+#define CES_CMDIF_PKT_STOP    0x0B
 
-#include "dsp/support_functions.h"
-#include "dsp/fast_math_functions.h"
+#define BUFFER_SIZE  100
+#define WINDOW_SIZE  4
+#define min(x,y) ((x) < (y) ? (x) : (y))
+
+#define D_RDY 20
 
 #define CONTROL0    0x00
 #define LED2STC     0x01
@@ -73,18 +71,6 @@
 #define LED2ABSVAL    0x2e
 #define LED1ABSVAL    0x2f
 #define DIAG      0x30
-#define count 60
-
-#define CES_CMDIF_PKT_START_1   0x0A
-#define CES_CMDIF_PKT_START_2   0xFA
-#define CES_CMDIF_TYPE_DATA   0x02
-#define CES_CMDIF_PKT_STOP    0x0B
-
-#define BUFFER_SIZE 500
-#define WINDOW_SIZE  10
-#define min(x,y) ((x) < (y) ? (x) : (y))
-
-#define D_RDY 20
 
 extern volatile bool Data_computed;
 extern const struct device *dev;
@@ -96,17 +82,47 @@ static int32_t an_x[BUFFER_SIZE];
 static int32_t an_y[BUFFER_SIZE];
 static uint8_t brc;
 static uint16_t graphCount;
-
-const uint8_t uch_spo2_table[184]={ 95, 95, 95, 96, 96, 96, 97, 97, 97, 97, 97, 98, 98, 98, 98, 98, 99, 99, 99, 99, 
-              99, 99, 99, 99, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 
-              100, 100, 100, 100, 99, 99, 99, 99, 99, 99, 99, 99, 98, 98, 98, 98, 98, 98, 97, 97, 
-              97, 97, 96, 96, 96, 96, 95, 95, 95, 94, 94, 94, 93, 93, 93, 92, 92, 92, 91, 91, 
-              90, 90, 89, 89, 89, 88, 88, 87, 87, 86, 86, 85, 85, 84, 84, 83, 82, 82, 81, 81, 
-              80, 80, 79, 78, 78, 77, 76, 76, 75, 74, 74, 73, 72, 72, 71, 70, 69, 69, 68, 67, 
-              66, 66, 65, 64, 63, 62, 62, 61, 60, 59, 58, 57, 56, 56, 55, 54, 53, 52, 51, 50, 
-              49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 31, 30, 29, 
-              28, 27, 26, 25, 23, 22, 21, 20, 19, 17, 16, 15, 14, 12, 11, 10, 9, 7, 6, 5, 
-              3, 2, 1 } ;
+#if 0
+void AFE4490_Init()
+{
+	AFE4490_Write(CONTROL0, CONTROL0_VAL);
+	AFE4490_Write(CONTROL0, SW_RST);
+	AFE4490_Write(TIAGAIN, TIAGAIN_VAL); // CF = 5pF, RF = 500kR
+	AFE4490_Write(TIA_AMB_GAIN, TIA_AMB_GAIN_VAL);
+	AFE4490_Write(LEDCNTRL, LEDCNTRL_VAL);
+	AFE4490_Write(CONTROL2, CONTROL2_VAL); // LED_RANGE=100mA, LED=50mA
+	AFE4490_Write(CONTROL1, CONTROL1_VAL); // Timers ON, average 3 samples
+	AFE4490_Write(PRPCOUNT, PRP);
+	AFE4490_Write(LED2STC, LED2STC_VAL);
+	AFE4490_Write(LED2ENDC, LED2ENDC_VAL);
+	AFE4490_Write(LED2LEDSTC, LED2LEDSTC_VAL);
+	AFE4490_Write(LED2LEDENDC, LED2LEDENDC_VAL);
+	AFE4490_Write(ALED2STC, ALED2STC_VAL);
+	AFE4490_Write(ALED2ENDC, ALED2ENDC_VAL);
+	AFE4490_Write(LED2CONVST, LED2CONVST_VAL);
+	AFE4490_Write(LED2CONVEND, LED2CONVEND_VAL);
+	AFE4490_Write(ALED2CONVST, ALED2CONVST_VAL);
+	AFE4490_Write(ALED2CONVEND, ALED2CONVEND_VAL);
+	AFE4490_Write(LED1STC, LED1STC_VAL);
+	AFE4490_Write(LED1ENDC, LED1ENDC_VAL);
+	AFE4490_Write(LED1LEDSTC, LED1LEDSTC_VAL);
+	AFE4490_Write(LED1LEDENDC, LED1LEDENDC_VAL);
+	AFE4490_Write(ALED1STC, ALED1STC_VAL);
+	AFE4490_Write(ALED1ENDC, ALED1ENDC_VAL);
+	AFE4490_Write(LED1CONVST, LED1CONVST_VAL);
+	AFE4490_Write(LED1CONVEND, LED1CONVEND_VAL);
+	AFE4490_Write(ALED1CONVST, ALED1CONVST_VAL);
+	AFE4490_Write(ALED1CONVEND, ALED1CONVEND_VAL);
+	AFE4490_Write(ADCRSTSTCT0, ADCRSTSTCT0_VAL);
+	AFE4490_Write(ADCRSTENDCT0, ADCRSTENDCT0_VAL);
+	AFE4490_Write(ADCRSTSTCT1, ADCRSTSTCT1_VAL);
+	AFE4490_Write(ADCRSTENDCT1, ADCRSTENDCT1_VAL);
+	AFE4490_Write(ADCRSTSTCT2, ADCRSTSTCT2_VAL);
+	AFE4490_Write(ADCRSTENDCT2, ADCRSTENDCT2_VAL);
+	AFE4490_Write(ADCRSTSTCT3, ADCRSTSTCT3_VAL);
+	AFE4490_Write(ADCRSTENDCT3, ADCRSTENDCT3_VAL);
+}
+#endif
 
 void AFE4490_Init()
 {
@@ -148,6 +164,7 @@ void AFE4490_Init()
 	  AFE4490_Write(ADCRSTENDCT3, 0X001770);
 }
 
+
 void GetSamples()
 {
 	bool read_data = false;
@@ -155,9 +172,12 @@ void GetSamples()
 	uint8_t spo2_valid = 0, hr_valid = 0;
 	uint8_t ir_rx_buf[4] = {0};
 	uint8_t red_rx_buf[4] = {0};
-	//unsigned long ir_rx_buf = 0;
-	//unsigned long red_rx_buf = 0;
-	
+	struct ble_packet Live_graph = {
+		.header1 = 0xBE,
+		.header2 = 0xFF,
+		.length = 0x09,
+	};
+
 	if(Data_computed == true) {	
 		ret = gpio_pin_interrupt_configure(dev, D_RDY, 	GPIO_INT_DISABLE);
 		if(ret < 0) {
@@ -177,16 +197,30 @@ void GetSamples()
 
 		red_rx_buf[0] = red_rx_buf[0] & 0b00111111;
 		data.raw_red = red_rx_buf[0] << 16 | red_rx_buf[1] << 8 | red_rx_buf[2];
-		
-		printf("%u, %u\r", (data.raw_IR),(data.raw_red));
-		if(brc == 20) {
-		 	IR_LED_Graph[graphCount] = (uint16_t)(data.raw_IR >> 4);
-		 	RED_LED_Graph[graphCount] = (uint16_t)(data.raw_red >> 4);
-		 	graphCount++;
-		 	brc = 0; 
+		if(brc == 30) {
+			IR_LED_Graph[graphCount] = (uint16_t)(data.raw_IR >> 4);
+			RED_LED_Graph[graphCount] = (uint16_t)(data.raw_red >> 4);
+			graphCount++;
+			brc = 0; 
 		}
 
 		brc++;
+		
+	 	   Live_graph.IR_msb = ir_rx_buf[0];
+		   Live_graph.IR_mid = ir_rx_buf[1];
+		   Live_graph.IR_lsb = ir_rx_buf[2];
+
+		   Live_graph.RED_msb = red_rx_buf[0];
+		   Live_graph.RED_mid = red_rx_buf[1];
+		   Live_graph.RED_lsb = red_rx_buf[2];
+
+		   Live_graph.SpO2 = data.SpO2;
+
+		   Live_graph.HR = data.Heart_Rate;
+		   Live_graph.CRC =  chksum8(&Live_graph.IR_lsb, 8);
+
+		BT_send((uint8_t *)&Live_graph);
+		send_data((uint8_t *)&Live_graph);
 
 		if(graphCount > BUFFER_SIZE - 1) {
 			estimate_spo2(IR_LED_Graph, BUFFER_SIZE, RED_LED_Graph, &(data.SpO2), &spo2_valid, &(data.Heart_Rate), &hr_valid);
@@ -200,7 +234,8 @@ void GetSamples()
 		ret = gpio_pin_interrupt_configure(dev, D_RDY, 	GPIO_INT_EDGE_TO_ACTIVE);
 		if(ret < 0) {
 			return;
-	 	}
+		}
+ 		  
 	}
 }
 
@@ -217,7 +252,7 @@ void estimate_spo2(uint16_t *pun_ir_buffer, int32_t n_ir_buffer_length, uint16_t
   int32_t n_spo2_calc; 
   int32_t n_y_dc_max, n_x_dc_max; 
   int32_t n_y_dc_max_idx, n_x_dc_max_idx; 
-  float an_ratio[5]; 
+  float an_ratio; 
   int32_t n_ratio_average; 
   int32_t n_nume, n_denom ;
 
@@ -227,15 +262,14 @@ void estimate_spo2(uint16_t *pun_ir_buffer, int32_t n_ir_buffer_length, uint16_t
   un_ir_mean =un_ir_mean/n_ir_buffer_length ;
     
   // remove DC and invert signal so that we can use peak detector as valley detector
-  for (k=0 ; k<n_ir_buffer_length ; k++ ) {  
+ for (k=0 ; k<n_ir_buffer_length ; k++ ) {  
     an_x[k] = -1*(pun_ir_buffer[k] - un_ir_mean) ;
   }
     
-    
-  // 4 pt Moving Average
+  //Moving Average
   for(k=0; k< BUFFER_SIZE - WINDOW_SIZE ; k++){
-    an_x[k]=( an_x[k]+an_x[k+1]+ an_x[k+2]+ an_x[k+3] + an_x[k+4] + an_x[k+5] + an_x[k+6] + an_x[k+7] +an_x[k+8] + an_x[k+9]) / (int)WINDOW_SIZE;     
-    //an_x[k]=( an_x[k]+an_x[k+1]+ an_x[k+2]+ an_x[k+3])/(int)4;   
+    //an_x[k]=( an_x[k]+an_x[k+1]+ an_x[k+2]+ an_x[k+3] + an_x[k+4] + an_x[k+5] + an_x[k+6] + an_x[k+7]) / (int)WINDOW_SIZE;
+	an_x[k]=( an_x[k]+an_x[k+1] + an_x[k+2]+ an_x[k+3]) / (int)WINDOW_SIZE;    
   }
   // calculate threshold  
   n_th1=0; 
@@ -251,11 +285,12 @@ void estimate_spo2(uint16_t *pun_ir_buffer, int32_t n_ir_buffer_length, uint16_t
   if (n_npks>=2){
     for (k=1; k<n_npks; k++) n_peak_interval_sum += (an_ir_valley_locs[k] -an_ir_valley_locs[k -1] ) ;
     n_peak_interval_sum =n_peak_interval_sum/(n_npks-1);
-    *pn_heart_rate =(uint8_t)( (25 * 60)/ n_peak_interval_sum );
+    *pn_heart_rate =(uint8_t)((17` * 60)/ n_peak_interval_sum);
     *pch_hr_valid  = 1;
   }
   else  { 
-    *pn_heart_rate = -1; // unable to calculate because # of peaks are too small
+    *pn_heart_rate = -1; // unable to calculate because # of peaks are too 
+    *pn_spo2 = -1;
     *pch_hr_valid  = 0;
   }
 
@@ -270,17 +305,6 @@ void estimate_spo2(uint16_t *pun_ir_buffer, int32_t n_ir_buffer_length, uint16_t
   
   //using exact_ir_valley_locs , find ir-red DC andir-red AC for SPO2 calibration an_ratio
   //finding AC/DC maximum of raw
-
-  n_ratio_average =0; 
-  n_i_ratio_count = 0; 
-  for(k=0; k< 5; k++) an_ratio[k]=0;
-  for (k=0; k< n_exact_ir_valley_locs_count; k++){
-    if (an_ir_valley_locs[k] > BUFFER_SIZE ){
-      *pn_spo2 =  -1 ; // do not use SPO2 since valley loc is out of range
-      *pch_spo2_valid  = 0; 
-      return;
-    }
-  }
 
   // find max between two valley locations 
   // and use an_ratio betwen AC compoent of Ir & Red and DC compoent of Ir & Red for SPO2 
@@ -300,24 +324,12 @@ void estimate_spo2(uint16_t *pun_ir_buffer, int32_t n_ir_buffer_length, uint16_t
       n_x_ac=  an_x[n_y_dc_max_idx] - n_x_ac;      // subracting linear DC compoenents from raw 
       n_nume=( n_y_ac *n_x_dc_max); //prepare X100 to preserve floating value
       n_denom= ( n_x_ac *n_y_dc_max);
-      if (n_denom>0  && n_i_ratio_count <5 &&  n_nume != 0)
-      {   
-         an_ratio[n_i_ratio_count]= (float)n_nume / (float)n_denom ; //formular is ( n_y_ac *n_x_dc_max) / ( n_x_ac *n_y_dc_max) ;
-        an_ratio[n_i_ratio_count] = 110.0 - 25.0 * an_ratio[n_i_ratio_count]; 
-        n_i_ratio_count++;
-      }
-    }
+      an_ratio += (float)n_nume / (float)n_denom;
   }
-  // choose median value since PPG signal may varies from beat to beat
-  sort_ascend((int32_t *)an_ratio, n_i_ratio_count);
-  n_middle_idx = n_i_ratio_count % 2;
-
-  if (!n_middle_idx)
-    n_ratio_average =( an_ratio[n_middle_idx-1] +an_ratio[n_middle_idx])/2; // use median
-  else
-    n_ratio_average = an_ratio[n_middle_idx ];
-
-  *pn_spo2 = (uint8_t)n_ratio_average;
+}
+an_ratio /= (float)k;
+*pn_spo2 = 120 - (34.3 * an_ratio);
+if(*pn_spo2 > 100) *pn_spo2 = 100;
 }
 
 
@@ -394,3 +406,12 @@ void sort_indices_descend(  int32_t  *pn_x, int32_t *pn_indx, int32_t n_size)
     pn_indx[j] = n_temp;
   }
 }
+
+static uint8_t chksum8(const unsigned char *buff, size_t len)
+{
+    unsigned int sum;
+    for ( sum = 0 ; len != 0 ; len-- )
+        sum += *(buff++);
+    return (uint8_t)sum;
+}
+
