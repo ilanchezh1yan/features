@@ -12,6 +12,7 @@
 #include <zephyr/drivers/spi.h>
 #include <nrfx_spim.h>
 #include "AFE_Function.h"
+#include "bluetooth.h"
 extern char DataToTransmit[20];
 extern int16_t graphCount;
 
@@ -19,21 +20,18 @@ struct computed data;
 
 int main(void)
 {
-	data.data_available = false;
-	printk("Hello World! %s\n", CONFIG_BOARD);
+	int ret;
 	DeviceBinding();
-    spi_init();
-	printk("e");
-    AFE4490_Init();
+	spi_init();
+	AFE4490_Init();
+	ret = ble_init();
+	if(ret) {
+		return 1;
+	}
 	k_sleep(K_MSEC(2000));
 	while(1)
 	{
 		GetSamples();
-		if(data.data_available == true) {
-			printk("%u, %u\r", data.SpO2, data.Heart_Rate);
-			data.data_available = false;
-			//k_sleep(K_SECONDS(2));
-		}
 
 	}
 
