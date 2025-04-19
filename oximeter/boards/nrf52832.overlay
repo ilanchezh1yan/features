@@ -1,0 +1,6 @@
+chip_select: &gpio0 {
+};
+
+spi_1: &spi1 {
+	status = "okay";
+};

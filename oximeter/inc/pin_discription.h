@@ -1,9 +1,5 @@
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/devicetree.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/spi.h>
-#include <nrfx_spim.h>
+#ifndef PIN_DISCRIPTION_H
+#define PIN_DISCRIPTION_H
 
 #define LED0_NODE DT_ALIAS(led0)
 
@@ -33,28 +29,11 @@
 #define FLAGS1	0
 #endif
 
+#define D_RDY 20
+
 #if !DT_NODE_EXISTS(DT_NODELABEL(spi1))
 #error "0oops"
 #endif
-#define SPI1 DT_NODELABEL(spi1)
+#define SPI1 DT_NODELABEL(spi_1)
 
-const struct device *dev;
-const struct device *spi_dev = NULL;
-#define SPIS_STACK_SIZE 1024
-#define SPIS_PRIORITY 5
- uint16_t tx_data1 = 0x35;
- uint8_t rx_data1[4];
-static uint8_t tx_buffer[32];
-static uint8_t rx_buffer[32];
-static const struct spi_config spi_cfg = {
-	.operation = SPI_WORD_SET(8) |	SPI_FRAME_FORMAT_MOTOROLA  |SPI_FULL_DUPLEX | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER | //SPI_OP_MODE_SLAVE |
-		     SPI_MODE_CPOL | SPI_MODE_CPHA,
-    .frequency =2000000,
-};
-void spi_init(void);
-void DeviceBinding();
-void SPI_SEND();
-void AFE4490_Init();
-void LED1_read();
-void AFE4490_Write(uint8_t, uint32_t );
-void AFE4490_Read (uint8_t, uint8_t *);
+#endif  

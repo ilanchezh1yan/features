@@ -11,8 +11,10 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
 #include <nrfx_spim.h>
-#include "AFE_Function.h"
+#include "AFE4490.h"
 #include "bluetooth.h"
+#include "spi.h"
+
 extern char DataToTransmit[20];
 extern int16_t graphCount;
 
@@ -24,16 +26,18 @@ int main(void)
 	DeviceBinding();
 	spi_init();
 	AFE4490_Init();
+
 	ret = ble_init();
 	if(ret) {
 		return 1;
 	}
+
 	k_sleep(K_MSEC(2000));
 	while(1)
 	{
 		GetSamples();
-
 	}
 
 	return 0;
+	
 }

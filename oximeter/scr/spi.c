@@ -1,10 +1,19 @@
 #include <stdint.h>
-#include "SPI_Zephyr.h"
-
-#define D_RDY 20
+#include "spi.h"
+#include "pin_discription.h"
 
 struct gpio_callback Data_ready;
 volatile bool Data_computed;
+
+const struct device *dev;
+
+static const struct device *spi_dev = NULL;
+
+static const struct spi_config spi_cfg = {
+	.operation = SPI_WORD_SET(8) |	SPI_FRAME_FORMAT_MOTOROLA  |SPI_FULL_DUPLEX | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER | //SPI_OP_MODE_SLAVE |
+		     SPI_MODE_CPOL | SPI_MODE_CPHA,
+    .frequency =2000000,
+};
 
 void Data_ready_cb(const struct device *dev, struct gpio_callback *cb, uint32_t pin)
 {
@@ -13,22 +22,19 @@ void Data_ready_cb(const struct device *dev, struct gpio_callback *cb, uint32_t 
 
 void spi_init(void)
 {
-	printk(" SPI init\n");
 	spi_dev = DEVICE_DT_GET(SPI1);
 	if (spi_dev == NULL) {
-		printk("Could not find SPI driver\n");
 		return;
-	}else printk("spi init success\n");
+	}
 
 	k_sleep(K_MSEC(50));
-
-		printk("C");
 }
 
 int spi_master_write(struct device * spi_dev, 
                      struct spi_config * spi_cfg,
                      uint8_t * data)
 {
+int err;
     struct spi_buf bufs = {
             .buf = data,
             .len = 4    //2
@@ -38,19 +44,18 @@ int spi_master_write(struct device * spi_dev,
     };
 
     tx.count = 1;
-	int err;
     err= spi_write(spi_dev, spi_cfg, &tx);
 		if (err) {
-		printk("spi write error: %d\n", err);
-		return false;
+		return err;
 	}
-
+return err;
 }
 
 int spi_master_write_Single(struct device * spi_dev, 
                      struct spi_config * spi_cfg,
                      uint16_t * data)
 {
+    int err;
     struct spi_buf bufs = {
             .buf = data,
             .len = 1    //2
@@ -60,18 +65,18 @@ int spi_master_write_Single(struct device * spi_dev,
     };
 
     tx.count = 1;
-	int err;
     err= spi_write(spi_dev, spi_cfg, &tx);
 		if (err) {
-		return false;
+		return err;
 	}
-
+    return err;
 }
 
 int spi_master_read(struct device * spi_dev, 
                     struct spi_config * spi_cfg,
                     uint8_t * data)
 {
+    int err;
     struct spi_buf bufs = {
             .buf = data,
             .len = 3
@@ -82,12 +87,13 @@ int spi_master_read(struct device * spi_dev,
 
     rx.count = 1;
 
-		int err;
     err=  spi_read(spi_dev, spi_cfg, &rx);
 	if (err) {
-		return false;
+		return err;
 	}
+return err;
 }
+
 void DeviceBinding()
 {
     int ret;
@@ -132,8 +138,10 @@ void DeviceBinding()
 
 void SPI_SEND()
 {
+	uint16_t tx_data1 = 0x35;
+
         gpio_pin_set(dev, CS_SPI, 1);
-        spi_master_write(spi_dev, &spi_cfg, &tx_data1);
+        spi_master_write((struct device *)spi_dev, (struct spi_config *)&spi_cfg, (uint8_t*)&tx_data1);
         gpio_pin_set(dev, CS_SPI, 0);
 }
 
@@ -141,7 +149,7 @@ void AFE4490_Write(uint8_t address,uint32_t SPIdataSend)
 {
 	gpio_pin_set(dev, CS_SPI, 1);//CS enable
 	uint8_t AFEsend[] = {address,((SPIdataSend>>16)& 0xFF),((SPIdataSend>>8)& 0xFF),(SPIdataSend & 0xFF)};
-	spi_master_write(spi_dev, &spi_cfg, (uint8_t*)AFEsend); 
+	spi_master_write((struct device *)spi_dev, (struct spi_config *)&spi_cfg, (uint8_t*)AFEsend); 
 	gpio_pin_set(dev, CS_SPI, 0);//CS enable
 }
 
@@ -149,9 +157,9 @@ void AFE4490_Read (uint8_t address, uint8_t *rx_buff)
 {
 	
 	gpio_pin_set(dev, CS_SPI, 1);//CS enable
-    uint8_t AFEsend[] = {address & 0xFF};
- 	spi_master_write_Single(spi_dev, &spi_cfg, (uint8_t*)AFEsend); 
-	spi_master_read(spi_dev, &spi_cfg, rx_buff);
+    	uint8_t AFEsend[] = {address & 0xFF};
+ 	spi_master_write_Single((struct device *)spi_dev, (struct spi_config *)&spi_cfg, (uint16_t*)AFEsend); 
+	spi_master_read((struct device *)spi_dev, (struct spi_config *)&spi_cfg, (uint8_t*)rx_buff);
 	gpio_pin_set(dev, CS_SPI, 0);//CS enable
 
 }

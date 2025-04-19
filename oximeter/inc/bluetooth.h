@@ -17,6 +17,6 @@ struct ble_packet {
 };
 
 int ble_init (void);
-int BT_send(unsigned char *);
+int BT_send(unsigned char *, unsigned char);
 #endif
 	
