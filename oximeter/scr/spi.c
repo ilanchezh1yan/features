@@ -117,12 +117,19 @@ void DeviceBinding()
 		return;
 	}
 
+	ret = gpio_pin_configure(dev, ON_LED, GPIO_OUTPUT);
+	if(ret) {
+		return;
+	}
+
 	gpio_init_callback(&Data_ready, &Data_ready_cb, BIT(D_RDY));
 
 	ret = gpio_add_callback(dev, &Data_ready);
 	if(ret < 0) {
 		return;
 	}
+
+	gpio_pin_set(dev, ON_LED, 1);
 
 	gpio_pin_set(dev, AFE_RESET, 1);
 	k_sleep(K_MSEC(500));
