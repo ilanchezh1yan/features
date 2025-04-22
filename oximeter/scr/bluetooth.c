@@ -8,8 +8,8 @@
 
 #include "bluetooth.h"
 
-#define MIN_CONNECTION_INTERVAL 8     /*1.25 ms connection interval */
-#define MAX_CONNECTION_INTERVAL 8     /*1.25ms connection interval */
+#define MIN_CONNECTION_INTERVAL 6     /*1.25 ms connection interval */
+#define MAX_CONNECTION_INTERVAL 12     /*1.25ms connection interval */
 #define SUPERVISOR_TIMEOUT 400          /* 4s connection timeout */
 
 static struct bt_uuid_128 custom_Read_service_uuid = BT_UUID_INIT_128(0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80,
