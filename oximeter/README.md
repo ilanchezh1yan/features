@@ -6,7 +6,7 @@ The **PPG Recorder (PPGR)** firmware is designed to acquire, process, and transm
 
 ## Hardware Specifications
 
-- **Microcontroller:** e.g., nRF52840 / STM32 / ESP32
+- **Microcontroller:** NRF52832
 - **PPG Sensor Module:** AFE4490
 - **Connectivity Modules:**
   - **USB via FTDI**
@@ -37,9 +37,9 @@ The **PPG Recorder (PPGR)** firmware is designed to acquire, process, and transm
   R = (AC_Red / DC_Red) / (AC_IR / DC_IR)
   ```
 - Use the linear expression for determining the SpO2
-```
-SpO2 = 127.05f - 41.238f * R
-```
+  ```
+  SpO2 = 127.05f - 41.238f * R
+  ```
 
 - Use an empirical formula or lookup table to convert **R** to **SpO₂ percentage**.
 
@@ -52,6 +52,7 @@ SpO2 = 127.05f - 41.238f * R
 | SPI Chip Select (CS) | 	28           | SPI CS for AFE4490       |
 | FTDI TX              | 	6            | Data transmission to PC  |
 | SPI		       |   nrf52832 spi_1    | Communication to AFE     |
+| ON LED       |        2          | indicator LED|
 
 ## Connectivity
 
@@ -68,8 +69,9 @@ SpO2 = 127.05f - 41.238f * R
 
 -Frame Format:
   | 2 byte header | length | 3 byte IR data | 3 byte red data | SpO2 | heart rate | CRC |
-    - header - 0xBEFF
-    - length - 0x09
+  |---------------|--------|----------------|-----------------|------|------------|------|
+  - header - 0xBEFF
+- length - 0x09
 
 >Note: If size not mentioned then it is of 1 byte size.
   
