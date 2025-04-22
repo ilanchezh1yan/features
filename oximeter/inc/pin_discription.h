@@ -30,6 +30,7 @@
 #endif
 
 #define D_RDY 20
+#define ON_LED 2
 
 #if !DT_NODE_EXISTS(DT_NODELABEL(spi1))
 #error "0oops"
