@@ -18,9 +18,9 @@ int uart_init(void)
         };
 
 	err = uart_configure(uart_dev, &uart_cfg);
-    	if(err){
+    	/*if(err){
 	    return err;
-    	}
+    	}*/ 
 	return err;
 }
 
