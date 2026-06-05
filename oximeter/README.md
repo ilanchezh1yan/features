@@ -20,7 +20,7 @@ The **PPG Recorder (PPGR)** firmware is designed to acquire, process, and transm
 - Apply moving average filter with window size 4.
 - Apply Kalman filter for enveloping. 
 - Find the number of peaks with moving window of size 5 and store its occurrence. 
-- calculate the time interval by the averaging the occurrence.
+- calculate the time interval by averaging the occurrence.
   ```
   Heart Rate (bpm) = 60 * (sampling rate) / (time interval)
   ```
