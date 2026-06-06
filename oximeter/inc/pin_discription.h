@@ -1,3 +1,10 @@
+/**
+ * @file pin_discription.h
+ * @brief Hardware pin configuration definitions.
+ *
+ * Defines GPIO assignments and peripheral pin mappings used by the
+ * nRF52832-based PPG Recorder hardware platform.
+ */
 #ifndef PIN_DISCRIPTION_H
 #define PIN_DISCRIPTION_H
 
