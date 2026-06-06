@@ -54,12 +54,34 @@ BT_GATT_SERVICE_DEFINE(custom_service,
     BT_GATT_CCC(CCC_cb, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
 
+/**
+ * @brief BLE connection callback.
+ *
+ * Invoked when a remote BLE device successfully establishes a
+ * connection with the PPG Recorder.
+ *
+ * @param conn Pointer to the active BLE connection.
+ * @param err Connection status code.
+ *
+ * @return None.
+ */
 void connected(struct bt_conn *conn, uint8_t err)
 {
 	struct bt_le_conn_param *param = BT_LE_CONN_PARAM(MIN_CONNECTION_INTERVAL, MAX_CONNECTION_INTERVAL , 0, SUPERVISOR_TIMEOUT);
 	bt_conn_le_param_update(conn, param);
 }
 
+/**
+ * @brief BLE connection callback.
+ *
+ * Invoked when a remote BLE device successfully establishes a
+ * connection with the PPG Recorder.
+ *
+ * @param conn Pointer to the active BLE connection.
+ * @param err Connection status code.
+ *
+ * @return None.
+ */
 void disconnected(struct bt_conn *conn, uint8_t err)
 {
     const struct bt_data ad[] = {
@@ -79,6 +101,16 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected,
 };        
 
+/**
+ * @brief Initialize Bluetooth Low Energy services.
+ *
+ * Enables the Bluetooth stack, registers custom GATT services,
+ * and prepares the device for advertising and data transmission.
+ *
+ * @return int Initialization status.
+ *         - 0 : Success
+ *         - Non-zero : Initialization failed
+ */
 int ble_init (void) 
 {
     int err;
@@ -103,6 +135,19 @@ int ble_init (void)
 
 }
 
+/**
+ * @brief Transmit data over Bluetooth Low Energy.
+ *
+ * Sends a packet through the custom BLE characteristic when
+ * notifications are enabled by the connected client.
+ *
+ * @param data Pointer to the transmit buffer.
+ * @param len Number of bytes to transmit.
+ *
+ * @return int Transmission status.
+ *         - 0 : Success
+ *         - Non-zero : Transmission failed
+ */
 int BT_send(uint8_t * RX_data, uint8_t size)
 {
 	int ret;
