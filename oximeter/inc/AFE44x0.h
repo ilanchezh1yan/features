@@ -1,3 +1,11 @@
+/**
+ * @file AFE44x0.h
+ * @brief Register definitions and interface declarations for the AFE4490 sensor.
+ *
+ * Contains register addresses, configuration macros, data structures,
+ * constants, and function declarations required for initialization,
+ * communication, and data acquisition from the AFE4490 analog front-end.
+ */
 /*
  * AFE44x0.h
  *
