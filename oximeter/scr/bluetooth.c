@@ -107,7 +107,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
  * Enables the Bluetooth stack, registers custom GATT services,
  * and prepares the device for advertising and data transmission.
  *
- * @return int Initialization status.
+ * @return Initialization status.
  *         - 0 : Success
  *         - Non-zero : Initialization failed
  */
