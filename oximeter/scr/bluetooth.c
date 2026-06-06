@@ -141,13 +141,14 @@ int ble_init (void)
  * Sends a packet through the custom BLE characteristic when
  * notifications are enabled by the connected client.
  *
- * @param data Pointer to the transmit buffer.
- * @param len Number of bytes to transmit.
+ * @param RX_data Pointer to the transmit buffer.
+ * @param size Number of bytes to transmit.
  *
  * @return int Transmission status.
  *         - 0 : Success
  *         - Non-zero : Transmission failed
  */
+int BT_send(uint8_t *RX_data, uint8_t size)
 int BT_send(uint8_t * RX_data, uint8_t size)
 {
 	int ret;
