@@ -1,3 +1,10 @@
+/**
+ * @file uart.h
+ * @brief UART interface definitions.
+ *
+ * Contains UART-related macros, data structures, and function
+ * declarations used for serial communication.
+ */
 #ifndef UART_H
 #define UART_H
 
