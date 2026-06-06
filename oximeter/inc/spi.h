@@ -48,12 +48,70 @@
 #endif
 #define SPI1 DT_NODELABEL(spi_1)
 
+/**
+ * @brief Initialize the SPI interface.
+ *
+ * Configures the SPI peripheral and associated GPIO pins required
+ * for communication with the AFE4490 sensor.
+ *
+ * @return None.
+ */
 void spi_init(void);
+
+/**
+ * @brief Bind GPIO devices used by the application.
+ *
+ * Obtains references to GPIO peripherals and configures the
+ * required pins for sensor control and interrupt handling.
+ *
+ * @return None.
+ */
 void DeviceBinding();
-void SPI_SEND();
-void AFE4490_Init();
-void AFE4490_Write(uint8_t, uint32_t );
-void AFE4490_Read (uint8_t, uint8_t *);
+
+/**
+ * @brief Transmit data through the SPI interface.
+ *
+ * Performs an SPI transfer to the connected peripheral device.
+ *
+ * @return None.
+ */
+void SPI_SEND(void);
+
+/**
+ * @brief Initialize and configure the AFE4490 sensor.
+ *
+ * Programs the AFE4490 registers, timing parameters, LED drive
+ * settings, and ADC conversion windows required for PPG acquisition.
+ *
+ * @return None.
+ */
+void AFE4490_Init(void);
+
+/**
+ * @brief Write data to an AFE4490 register.
+ *
+ * Sends a register address and associated data value to the
+ * AFE4490 using the SPI interface.
+ *
+ * @param reg Register address.
+ * @param data Data value to be written.
+ *
+ * @return None.
+ */
+void AFE4490_Write(uint8_t reg, uint32_t data);
+
+/**
+ * @brief Read data from an AFE4490 register.
+ *
+ * Retrieves register contents from the AFE4490 through the
+ * SPI interface.
+ *
+ * @param reg Register address.
+ * @param data Pointer to the receive buffer.
+ *
+ * @return None.
+ */
+void AFE4490_Read(uint8_t reg, uint8_t *data);
 
 #endif
 
