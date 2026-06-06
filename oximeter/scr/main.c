@@ -1,3 +1,11 @@
+/**
+ * @file main.c
+ * @brief Main application entry point for the PPG Recorder firmware.
+ *
+ * Initializes the SPI interface, AFE4490 sensor, and Bluetooth services,
+ * then continuously acquires and processes photoplethysmography (PPG)
+ * samples for heart rate and SpO₂ estimation.
+ */
 /*
  * Copyright (c) 2012-2014 Wind River Systems, Inc.
  *
