@@ -1,3 +1,11 @@
+/**
+ * @file bluetooth.c
+ * @brief Bluetooth Low Energy communication module.
+ *
+ * Implements BLE services, characteristics, advertising, connection
+ * management, and transmission of physiological measurement data
+ * to external devices.
+ */
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h>
