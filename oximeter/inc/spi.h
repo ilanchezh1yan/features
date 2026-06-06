@@ -1,3 +1,10 @@
+/**
+ * @file spi.h
+ * @brief SPI interface definitions.
+ *
+ * Declares SPI initialization and data transfer functions used by
+ * higher-level modules to communicate with the AFE4490 sensor.
+ */
 #ifndef SPI_H
 #define SPI_H
 
