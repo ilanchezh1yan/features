@@ -26,8 +26,20 @@
 extern char DataToTransmit[20];
 extern int16_t graphCount;
 
+/** Global structure containing processed physiological measurements. */
 struct computed data;
 
+/**
+ * @brief Entry point of the PPG Recorder firmware.
+ *
+ * Performs hardware initialization, configures the AFE4490 sensor,
+ * enables Bluetooth communication, and continuously processes
+ * incoming PPG samples.
+ *
+ * @return int Application status.
+ *         - 0 : Normal termination
+ *         - 1 : Bluetooth initialization failed
+ */
 int main(void)
 {
 	int ret;
