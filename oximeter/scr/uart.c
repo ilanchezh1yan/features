@@ -1,3 +1,10 @@
+/**
+ * @file uart.c
+ * @brief UART communication driver.
+ *
+ * Implements serial communication functions used for debugging,
+ * diagnostics, and monitoring of system data through an FTDI interface.
+ */
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
