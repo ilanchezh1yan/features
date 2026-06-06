@@ -1,3 +1,10 @@
+/**
+ * @file spi.c
+ * @brief SPI communication driver for the AFE4490 sensor.
+ *
+ * Provides initialization and low-level SPI read/write operations
+ * required for communication between the nRF52832 and AFE4490.
+ */
 #include <stdint.h>
 #include "spi.h"
 #include "pin_discription.h"
