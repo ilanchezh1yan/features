@@ -77,14 +77,30 @@
 #define LED1ABSVAL    0x2f
 #define DIAG      0x30
 
+/**
+ * @brief Stores processed physiological measurement data.
+ *
+ * Contains calculated SpO₂ and heart rate values along with
+ * the latest raw IR and Red sensor readings obtained from
+ * the AFE4490 sensor.
+ */
 struct computed {
-    uint8_t SpO2;
-    uint8_t Heart_Rate;
-    uint32_t raw_IR;
-    uint32_t raw_red;
-    volatile uint8_t data_available;
+    uint8_t SpO2;                  /**< Calculated blood oxygen saturation (%) */
+    uint8_t Heart_Rate;            /**< Calculated heart rate (BPM) */
+    uint32_t raw_IR;               /**< Raw infrared LED measurement */
+    uint32_t raw_red;              /**< Raw red LED measurement */
+    volatile uint8_t data_available; /**< Indicates availability of new processed data */
 };
 
-void GetSamples();
-
+/**
+ * @brief Acquire and process PPG sensor samples.
+ *
+ * Reads raw IR and Red LED data from the AFE4490 sensor,
+ * updates waveform buffers, computes heart rate and SpO₂
+ * values, and transmits data through available communication
+ * interfaces.
+ *
+ * @return None.
+ */
+void GetSamples(void);
 #endif
