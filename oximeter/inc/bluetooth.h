@@ -1,3 +1,10 @@
+/**
+ * @file bluetooth.h
+ * @brief Public interface for Bluetooth Low Energy communication.
+ *
+ * Defines BLE-related data structures, UUIDs, packet formats, and
+ * function declarations used for wireless data transmission.
+ */
 #ifndef BLUETOOTH_H_
 #define BLUETOOTH_H_
 
