@@ -1,3 +1,11 @@
+/**
+ * @file AFE4490.h
+ * @brief Public interface and configuration definitions for the AFE4490 module.
+ *
+ * Contains register definitions, macros, data structures, and function
+ * declarations required for sensor initialization, data acquisition,
+ * and physiological parameter computation.
+ */
 #ifndef AFE4490_H
 #define AFE4490_H
 
