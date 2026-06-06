@@ -29,6 +29,17 @@ static uint8_t data_packet[12];
 
 volatile uint8_t BT_notify_enable;                                                       
 
+/**
+ * @brief Handle BLE notification configuration changes.
+ *
+ * Updates the notification status when a client enables or disables
+ * notifications for the live data characteristic.
+ *
+ * @param attr Pointer to the characteristic attribute.
+ * @param value New Client Characteristic Configuration value.
+ *
+ * @return None.
+ */
 void CCC_cb(const struct bt_gatt_attr *attr, uint16_t value)
 {
    BT_notify_enable = value;
