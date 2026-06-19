@@ -70,9 +70,8 @@ SpO2 = 127.05f - 41.238f * R
   | 2 byte header | length | 3 byte IR data | 3 byte red data | SpO2 | heart rate | CRC |
     - header - 0xBEFF
     - length - 0x09
-```
-Note: If size not mentioned they it is of 1 byte size.
-```
+
+>Note: If size not mentioned then it is of 1 byte size.
   
 - Connect via a mobile app or BLE terminal to access live health data.
 

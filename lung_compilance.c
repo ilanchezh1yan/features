@@ -2,58 +2,82 @@
 
 #include "lung_compilance.h"
 #include "Kalman_filter.h"
+#include "DWT_Delay.h"
 
-double  flow;
-double Max_flow, Max_flow_2;
-double flow_2;
+//#include <math.h>
+extern HAL_TickFreqTypeDef uwTickFreq;
+extern DAC_HandleTypeDef hdac;
+extern ADC_HandleTypeDef hadc1;
+extern I2C_HandleTypeDef hi2c2;
+extern I2C_HandleTypeDef hi2c1;
+extern uint16_t dac;
+extern uint16_t O2_dac;
+
+float  flow, Max_flow;
 float dp;
 uint16_t vlt;
-
+uint32_t Ticks;
+volatile uint32_t exe_time;
+float O2_vlt;
 uint16_t count;
+
+float Ti;
+uint8_t RR;
 
 #if 0
 void kalman_filter_init()
 {
-	struct system_model Model;
-	Model.A = 1;
-	Model.H = 1;
-	Model.Q = 1;
-	Model.R = 1;
+	struct system_model Model ={
+						.A = 1,
+						.H = 1,
+						.Q = 1,
+						.R = 1};
 }
 #endif
 
 
-int32_t Read_Flow(uint8_t * data)
+int32_t Read_ads115(uint8_t * data, uint8_t i2c)
 {
 	int32_t ret;
 	uint8_t Config_Reg[3] = {0x01, 0x40, 0xE3};
+	I2C_HandleTypeDef *hal_i2c = NULL;
+	switch(i2c) {
+	case I2C_1:
+		hal_i2c = &hi2c1;
+		break;
 
-	ret = HAL_I2C_Master_Transmit(&hi2c2,  SLAVE_WRITE, Config_Reg, 3, 100);
+	case I2C_2:
+		hal_i2c = &hi2c2;
+		break;
+
+	default:
+		break;
+	}
+	ret = HAL_I2C_Master_Transmit(hal_i2c,  SLAVE_WRITE, Config_Reg, 3, 100);
 	if(ret != HAL_OK)
 		return ret;
 
 	Config_Reg[0] = 0x00;
-	ret = HAL_I2C_Master_Transmit(&hi2c2, SLAVE_WRITE, Config_Reg, 1, 100);
+	ret = HAL_I2C_Master_Transmit(hal_i2c, SLAVE_WRITE, Config_Reg, 1, 100);
 	if(ret != HAL_OK)
 		return ret;
 
-	ret = HAL_I2C_Master_Receive(&hi2c2, SLAVE_READ, data, 2, 100);
+	ret = HAL_I2C_Master_Receive(hal_i2c, SLAVE_READ, data, 2, 100);
 	if(ret != HAL_OK)
 		return ret;
 
 	return -1;
 }
 
-double dp_to_flow(float dp){
+float dp_to_flow(float dp){
 
-#if 1
-	if(dp < 0.1){
-		return 0.0;
+	float flow;
+	if(dp < 0){
+		return 0;
 	}
-#endif
-
-	double flow = ((0.72*dp*dp*dp) - (8.01*dp*dp) + (56.7*dp) - 6.18);
-	flow_2 = ((0.1512*dp*dp*dp) - (3.3424*dp*dp) + (41.657*dp));  // as per data sheet
+	//flow = (0.1512f * dp * dp * dp) - (3.3424f * dp * dp) + (41.657f * dp);
+		flow = dp > 0.46 ? ((0.1512f * dp * dp * dp) - (3.3424f * dp * dp) + (41.657f * dp)) : ((0.72f * dp * dp * dp) - (8.01f * dp * dp) + (56.7f * dp) - 6.18f);
+	//flow =  ((0.72f * dp * dp * dp) - (8.01f * dp * dp) + (56.7f * dp) - 6.18f);
 	return flow;
 }
 
@@ -75,54 +99,69 @@ uint16_t calculated_pressure(void)
 	return pressure;
 }
 
-float calculated_volume(uint16_t offset, uint16_t error)
+float calculated_volume(uint16_t offset, uint16_t error, uint32_t Ti)
 {
 	count = 0;
 	uint32_t ret;
-	uint16_t Raw_value, sampling_rate = 1000;
-	float prv_read = 0;
+	uint16_t Raw_value, i = 0;
+	volatile float prv_read = 0;
+	uint16_t noisy_vlt;
 	float V = 0;
 
-	float arr[5000] = {0};
 	static uint16_t reading = 0;
 	struct parameters KF_param = {
 					.estimate = offset,
 					.predict = error
 	};
 
-
-	//int8_t flow_direction = 1;
-
-	Max_flow_2 = 0;
 	Max_flow = 0;
 
+	if ( dac < 400){
+		return 0;
+	}
 
-	while(1){
-		ret = Read_Flow((uint8_t *)&Raw_value);
+	HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac);
+	Ticks =  HAL_GetTick();
+
+	if (Ti < HAL_MAX_DELAY)
+	{
+	    Ti += (uint32_t)(uwTickFreq);
+	}
+	while((HAL_GetTick() - Ticks) < Ti){
+
+		ret = Read_ads115((uint8_t *)&Raw_value, I2C_2);
 		if(ret != -1)
-			return ret;
-
+				return ret;
 		Raw_value = Raw_value << 8 | Raw_value >> 8;
 		Raw_value = Raw_value & 0xFFFB;
-		vlt = Raw_value * 6144.0 / 32767.0;
 
-		vlt = (uint16_t)Kalman_filter(vlt , &KF_param);
-		reading = (1 - 0.15) * reading + (0.15 * vlt);
-		dp = ((float)reading - (float)offset) / (float)100.0;
+		noisy_vlt = Raw_value * (6144.0f / 32767.0f);
+
+		DWT->CYCCNT =(volatile uint32_t)0;
+		vlt = (uint16_t)Kalman_filter(noisy_vlt , &KF_param);
+		exe_time = (volatile uint32_t)DWT->CYCCNT;
+
+		reading = (1 - 0.2f) * reading + (0.2f * vlt);
+		dp = ((float)vlt - (float)offset) / (float)100.0;
 		flow = dp_to_flow(dp);
-		arr[count] = flow;
-		V += (float)((flow / 60)) * 1.078;
-		Max_flow = flow > Max_flow ? flow : Max_flow;
-		Max_flow_2 = flow_2 > Max_flow_2 ? flow_2 : Max_flow_2;
 
-		if(prv_read > (float)0 && flow <= (float)0 ) {
-			flow = Max_flow;
-			break;
+		if(count >= 3) {
+		if(flow > 0)  {
+			V += (float)(flow / 60.0f) * 3;
+			count = 0;
+			}
 		}
+		Max_flow = flow > Max_flow ? flow : Max_flow;
 
+		if(prv_read > (float)0 && flow < (float)0 ) {
+			ret = Read_ads115((uint8_t *)&Raw_value, I2C_1);
+			Raw_value = Raw_value << 8 | Raw_value >> 8;
+			O2_vlt = Raw_value * (6144.0f / 32767.0f);
+			ret = HAL_DAC_SetValue(&hdac, DAC_CHANNEL_2, DAC_ALIGN_12B_R, 0);
+		}
 		prv_read = flow;
 		count++;
-		sampling_rate--;
 	}
+	flow = Max_flow;
 	return V;
 }
