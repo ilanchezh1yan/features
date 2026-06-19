@@ -1,6 +1,19 @@
+/**
+ * @file bluetooth.h
+ * @brief Public interface for Bluetooth Low Energy communication.
+ *
+ * Defines BLE-related data structures, UUIDs, packet formats, and
+ * function declarations used for wireless data transmission.
+ */
 #ifndef BLUETOOTH_H_
 #define BLUETOOTH_H_
 
+/**
+ * @brief BLE packet format used for live physiological data transmission.
+ *
+ * Contains IR and RED PPG samples, calculated SpO₂ and heart rate values,
+ * packet metadata, and checksum information for data integrity verification.
+ */
 struct ble_packet {
 	unsigned char header1;
 	unsigned char header2;
@@ -16,7 +29,30 @@ struct ble_packet {
 	unsigned char CRC;
 };
 
-int ble_init (void);
-int BT_send(unsigned char *, unsigned char);
-#endif
+/**
+ * @brief Initialize Bluetooth Low Energy services.
+ *
+ * Enables the Bluetooth stack, registers custom GATT services,
+ * and prepares the device for advertising and data transmission.
+ *
+ * @return int Initialization status.
+ *         - 0 : Success
+ *         - Non-zero : Initialization failed
+ */
+int ble_init(void);
+
+/**
+ * @brief Transmit data through the BLE interface.
+ *
+ * Sends a packet over the custom BLE characteristic when
+ * notifications are enabled by the connected client.
+ *
+ * @param data Pointer to the transmit buffer.
+ * @param len Number of bytes to transmit.
+ *
+ * @return int Transmission status.
+ *         - 0 : Success
+ *         - Non-zero : Transmission failed
+ */
+int BT_send(unsigned char *data, unsigned char len);
 	

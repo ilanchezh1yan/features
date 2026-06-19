@@ -1,3 +1,11 @@
+/**
+ * @file AFE4490.c
+ * @brief Main application entry point for the PPG Recorder firmware.
+ *
+ * Initializes the SPI interface, AFE4490 sensor, and Bluetooth services,
+ * then continuously acquires and processes photoplethysmography (PPG)
+ * samples for heart rate and SpO₂ estimation.
+ */
 #include <stdint.h>
 #include <stdlib.h>
 #include <zephyr/kernel.h>
@@ -9,12 +17,23 @@
 #include "pin_discription.h"
 #include "uart.h"
 
-static void estimate_spo2_hr(uint16_t *, int32_t, uint16_t *, uint8_t *, int8_t *, uint8_t *, int8_t *);
-static uint8_t chksum8(const unsigned char *, size_t);
-static uint16_t find_max(uint16_t *, uint16_t);
-static uint16_t find_min(uint16_t *, uint16_t);
-static void kalman_filter(uint16_t *, uint16_t);
-static uint16_t find_peak(uint16_t *, uint16_t *, uint16_t);
+/** Buffer containing IR PPG waveform samples. */
+static uint16_t IR_LED_Graph[BUFFER_SIZE];
+
+/** Buffer containing Red LED PPG waveform samples. */
+static uint16_t RED_LED_Graph[BUFFER_SIZE];
+
+/** Filtered IR waveform used for peak detection. */
+static uint16_t filterd_ir_signal[BUFFER_SIZE];
+
+/** Inverted IR waveform. */
+static uint16_t inverted_ir_signal[BUFFER_SIZE];
+
+/** Inverted Red waveform. */
+static uint16_t inverted_red_signal[BUFFER_SIZE];
+
+/** Kalman filter process noise covariance. */
+static float KF_process_noice_covariance = 0.01f;
 
 extern volatile bool Data_computed;
 extern const struct device *dev;
@@ -29,6 +48,15 @@ static uint16_t inverted_red_signal[BUFFER_SIZE];
 
 static float KF_process_noice_covariance = 0.01f;
 
+/**
+ * @brief Initialize and configure the AFE4490 sensor.
+ *
+ * Programs the AFE4490 register set with timing, gain, LED drive,
+ * ADC reset, and conversion parameters required for PPG signal
+ * acquisition.
+ *
+ * @return None.
+ */
 void AFE4490_Init()
 {
 	  AFE4490_Write(CONTROL0, 0x000000);
@@ -69,7 +97,16 @@ void AFE4490_Init()
 	  AFE4490_Write(ADCRSTENDCT3, 0X001770);
 }
 
-
+/**
+ * @brief Acquire and process sensor samples.
+ *
+ * Reads IR and Red LED measurements from the AFE4490, updates
+ * waveform buffers, computes heart rate and SpO₂ values when
+ * sufficient data is available, and prepares data packets for
+ * transmission through UART or BLE.
+ *
+ * @return None.
+ */
 void GetSamples()
 {
 	bool read_data = false;
@@ -154,6 +191,22 @@ void GetSamples()
 	}
 }
 
+/**
+ * @brief Estimate heart rate and blood oxygen saturation.
+ *
+ * Processes IR and Red PPG samples using filtering, peak detection,
+ * and ratio-of-ratios analysis to calculate heart rate and SpO₂.
+ *
+ * @param pure_ir_buffer Buffer containing IR samples.
+ * @param n_ir_buffer_length Number of IR samples.
+ * @param pure_red_buffer Buffer containing Red LED samples.
+ * @param pn_spo2 Pointer to calculated SpO₂ value.
+ * @param pch_spo2_valid Pointer to SpO₂ validity flag.
+ * @param pn_heart_rate Pointer to calculated heart rate.
+ * @param pch_hr_valid Pointer to heart rate validity flag.
+ *
+ * @return None.
+ */
 static void estimate_spo2_hr(uint16_t *pure_ir_buffer, int32_t n_ir_buffer_length, uint16_t *pure_red_buffer, uint8_t *pn_spo2, int8_t *pch_spo2_valid, uint8_t *pn_heart_rate, int8_t *pch_hr_valid)
 {
   uint8_t k, valid_ratio = 0;
@@ -229,6 +282,16 @@ for(k = 0; k < peaks - 1; k++) {
   
 }
 
+/**
+ * @brief Apply Kalman filtering to a signal buffer.
+ *
+ * Reduces noise and smooths the waveform prior to peak detection.
+ *
+ * @param signal Pointer to the signal buffer.
+ * @param Data_length Number of samples in the buffer.
+ *
+ * @return None.
+ */
 static void kalman_filter(uint16_t *signal, uint16_t Data_length) 
 {
 	uint16_t KF_state_estimation = signal[0];
@@ -249,6 +312,18 @@ static void kalman_filter(uint16_t *signal, uint16_t Data_length)
 	}
 }
 
+/**
+ * @brief Detect peaks in a filtered PPG waveform.
+ *
+ * Searches the signal for local maxima and records their
+ * sample positions for heart rate calculation.
+ *
+ * @param Signal Pointer to the filtered signal buffer.
+ * @param Peak_interval Buffer used to store detected peak locations.
+ * @param Data_length Number of samples in the signal.
+ *
+ * @return uint16_t Number of peaks detected.
+ */
 static uint16_t find_peak(uint16_t *Signal, uint16_t *Peak_interval, uint16_t Data_length)
 {
 	uint16_t PeakWindow[PEAK_DETECTION_WINDOW_SIZE] = {0};
@@ -282,6 +357,17 @@ static uint16_t find_peak(uint16_t *Signal, uint16_t *Peak_interval, uint16_t Da
 
 }
 
+/**
+ * @brief Calculate an 8-bit checksum.
+ *
+ * Computes the checksum of a data buffer by summing all bytes
+ * and returning the least significant 8 bits.
+ *
+ * @param buff Pointer to the data buffer.
+ * @param len Length of the buffer in bytes.
+ *
+ * @return uint8_t Calculated checksum value.
+ */
 static uint8_t chksum8(const unsigned char *buff, size_t len)
 {
     unsigned int sum;
@@ -290,6 +376,16 @@ static uint8_t chksum8(const unsigned char *buff, size_t len)
     return (uint8_t)sum;
 }
 
+/**
+ * @brief Find the maximum value in a data buffer.
+ *
+ * Searches a buffer and returns the largest sample value.
+ *
+ * @param data Pointer to the input buffer.
+ * @param size Number of samples in the buffer.
+ *
+ * @return uint16_t Maximum value found.
+ */
 static uint16_t find_max(uint16_t *data, uint16_t size)
 {
 	uint16_t max = 0;
@@ -299,6 +395,16 @@ static uint16_t find_max(uint16_t *data, uint16_t size)
 	return max;
 }
 
+/**
+ * @brief Find the minimum value in a data buffer.
+ *
+ * Searches a buffer and returns the smallest sample value.
+ *
+ * @param data Pointer to the input buffer.
+ * @param size Number of samples in the buffer.
+ *
+ * @return uint16_t Minimum value found.
+ */
 static uint16_t find_min(uint16_t *data, uint16_t size)
 {
 	uint16_t min = -1;

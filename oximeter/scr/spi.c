@@ -1,3 +1,10 @@
+/**
+ * @file spi.c
+ * @brief SPI communication driver for the AFE4490 sensor.
+ *
+ * Provides initialization and low-level SPI read/write operations
+ * required for communication between the nRF52832 and AFE4490.
+ */
 #include <stdint.h>
 #include "spi.h"
 #include "pin_discription.h"
@@ -15,11 +22,31 @@ static const struct spi_config spi_cfg = {
     .frequency =2000000,
 };
 
+/**
+ * @brief Data-ready interrupt callback.
+ *
+ * Triggered when the AFE4490 asserts the data-ready signal.
+ * Sets a flag indicating that a new sample is available for processing.
+ *
+ * @param dev Pointer to the GPIO device.
+ * @param cb Pointer to the callback structure.
+ * @param pin GPIO pin that generated the interrupt.
+ *
+ * @return None.
+ */
 void Data_ready_cb(const struct device *dev, struct gpio_callback *cb, uint32_t pin)
 {
 	Data_computed = true;
 }
 
+/**
+ * @brief Initialize the SPI peripheral.
+ *
+ * Obtains the SPI device handle and prepares the interface
+ * for communication with the AFE4490 sensor.
+ *
+ * @return None.
+ */
 void spi_init(void)
 {
 	spi_dev = DEVICE_DT_GET(SPI1);
@@ -30,6 +57,19 @@ void spi_init(void)
 	k_sleep(K_MSEC(50));
 }
 
+/**
+ * @brief Write multiple bytes over SPI.
+ *
+ * Transmits a data buffer to the connected SPI peripheral.
+ *
+ * @param spi_dev Pointer to the SPI device.
+ * @param spi_cfg Pointer to the SPI configuration structure.
+ * @param data Pointer to the transmit buffer.
+ *
+ * @return int SPI transaction status.
+ *         - 0 : Success
+ *         - Non-zero : Transaction failed
+ */
 int spi_master_write(struct device * spi_dev, 
                      struct spi_config * spi_cfg,
                      uint8_t * data)
@@ -51,6 +91,19 @@ int err;
 return err;
 }
 
+/**
+ * @brief Write a single byte over SPI.
+ *
+ * Performs a single-byte SPI transmission to the connected device.
+ *
+ * @param spi_dev Pointer to the SPI device.
+ * @param spi_cfg Pointer to the SPI configuration structure.
+ * @param data Pointer to the data byte to transmit.
+ *
+ * @return int SPI transaction status.
+ *         - 0 : Success
+ *         - Non-zero : Transaction failed
+ */
 int spi_master_write_Single(struct device * spi_dev, 
                      struct spi_config * spi_cfg,
                      uint16_t * data)
@@ -72,6 +125,20 @@ int spi_master_write_Single(struct device * spi_dev,
     return err;
 }
 
+/**
+ * @brief Read data from an SPI peripheral.
+ *
+ * Receives data from the connected SPI device and stores
+ * it in the provided buffer.
+ *
+ * @param spi_dev Pointer to the SPI device.
+ * @param spi_cfg Pointer to the SPI configuration structure.
+ * @param data Pointer to the receive buffer.
+ *
+ * @return int SPI transaction status.
+ *         - 0 : Success
+ *         - Non-zero : Transaction failed
+ */
 int spi_master_read(struct device * spi_dev, 
                     struct spi_config * spi_cfg,
                     uint8_t * data)
@@ -94,6 +161,16 @@ int spi_master_read(struct device * spi_dev,
 return err;
 }
 
+/**
+ * @brief Configure GPIO devices and interrupt sources.
+ *
+ * Initializes GPIO pins used for AFE reset, chip select,
+ * data-ready interrupt, and status LED operation.
+ * Registers the data-ready interrupt callback and resets
+ * the AFE4490 sensor.
+ *
+ * @return None.
+ */
 void DeviceBinding()
 {
     int ret;
@@ -117,12 +194,19 @@ void DeviceBinding()
 		return;
 	}
 
+	ret = gpio_pin_configure(dev, ON_LED, GPIO_OUTPUT);
+	if(ret) {
+		return;
+	}
+
 	gpio_init_callback(&Data_ready, &Data_ready_cb, BIT(D_RDY));
 
 	ret = gpio_add_callback(dev, &Data_ready);
 	if(ret < 0) {
 		return;
 	}
+
+	gpio_pin_set(dev, ON_LED, 1);
 
 	gpio_pin_set(dev, AFE_RESET, 1);
 	k_sleep(K_MSEC(500));
@@ -136,6 +220,14 @@ void DeviceBinding()
 
 }
 
+/**
+ * @brief Transmit a test SPI command.
+ *
+ * Sends a predefined SPI value to verify communication
+ * with the connected peripheral device.
+ *
+ * @return None.
+ */
 void SPI_SEND()
 {
 	uint16_t tx_data1 = 0x35;
@@ -145,6 +237,17 @@ void SPI_SEND()
         gpio_pin_set(dev, CS_SPI, 0);
 }
 
+/**
+ * @brief Write data to an AFE4490 register.
+ *
+ * Sends a register address followed by a 24-bit data value
+ * to the AFE4490 using SPI communication.
+ *
+ * @param address Register address.
+ * @param SPIdataSend Data value to be written.
+ *
+ * @return None.
+ */
 void AFE4490_Write(uint8_t address,uint32_t SPIdataSend)
 {
 	gpio_pin_set(dev, CS_SPI, 1);//CS enable
@@ -153,6 +256,17 @@ void AFE4490_Write(uint8_t address,uint32_t SPIdataSend)
 	gpio_pin_set(dev, CS_SPI, 0);//CS enable
 }
 
+/**
+ * @brief Read data from an AFE4490 register.
+ *
+ * Sends a register address and retrieves the corresponding
+ * register contents from the AFE4490.
+ *
+ * @param address Register address.
+ * @param rx_buff Pointer to the receive buffer.
+ *
+ * @return None.
+ */
 void AFE4490_Read (uint8_t address, uint8_t *rx_buff)
 {
 	
