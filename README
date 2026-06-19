@@ -1,37 +1,56 @@
+MAX17261 Fuel Gauge Driver
+A modular driver for the MAX17261 ModelGauge m5 EZ fuel gauge IC using Arduino and I²C communication.
+Overview
+This project implements a configurable driver supporting battery measurements, alert registers, status registers, configuration registers, calibration registers, and interactive reserved register lookup.
+Features
+•	Cell Voltage (VCELL)
+•	Average Voltage (AVGVCELL)
+•	Current and Average Current
+•	Temperature Measurements
+•	SOC and Battery Age
+•	Capacity Registers
+•	Time-To-Empty and Time-To-Full
+•	Alert Threshold Registers
+•	STATUS, STATUS2 and FSTAT Registers
+•	Configuration Registers
+•	Calibration Registers
+•	Interactive Reserved Register Lookup
+Reserved Register Lookup
+User enters a hexadecimal address through Serial Monitor.
 
-This directory is intended for project header files.
-
-A header file is a file containing C declarations and macro definitions
-to be shared between several project source files. You request the use of a
-header file in your project source file (C, C++, etc) located in `src` folder
-by including it, with the C preprocessing directive `#include'.
-
-```src/main.c
-
-#include "header.h"
-
-int main (void)
-{
- ...
-}
-```
-
-Including a header file produces the same results as copying the header file
-into each source file that needs it. Such copying would be time-consuming
-and error-prone. With a header file, the related declarations appear
-in only one place. If they need to be changed, they can be changed in one
-place, and programs that include the header file will automatically use the
-new version when next recompiled. The header file eliminates the labor of
-finding and changing all the copies as well as the risk that a failure to
-find one copy will result in inconsistencies within a program.
-
-In C, the convention is to give header files names that end with `.h'.
-
-Read more about using header files in official GCC documentation:
-
-* Include Syntax
-* Include Operation
-* Once-Only Headers
-* Computed Includes
-
-https://gcc.gnu.org/onlinedocs/cpp/Header-Files.html
+Example:
+30  → REG 0x30 : 0x0C01
+E4  → REG 0xE4 : 0x00B3
+Project Structure
+MAX17261
+├── include
+│   ├── MAX17261.h
+│   ├── MAX17261_CONFIG.h
+│   └── I2C.h
+├── src
+│   ├── MAX17261.cpp
+│   ├── I2C.cpp
+│   └── main.cpp
+├── platformio.ini
+└── README
+Communication Interface
+Protocol : I²C
+Device Address : 0x36
+Platform : Arduino
+Environment : PlatformIO
+Applications
+•	Battery Management Systems
+•	Embedded Systems
+•	Battery Diagnostics
+•	Driver Development and Validation
+Author
+Mukund Krishna S V
+NIT Trichy – Electronics and Communication Engineering
+Status
+•	Driver Functional
+•	Register Access Verified
+•	Alert Registers Verified
+•	Status Registers Verified
+•	Configuration Registers Verified
+•	Calibration Registers Verified
+•	Interactive Reserved Register Lookup Implemented
